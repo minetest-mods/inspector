@@ -12,7 +12,7 @@ of the license, or (at your option) any later version.
 
 minetest.register_tool("inspector:inspector", {
 	description = "Inspector Tool",
-	inventory_image = "screwdriver.png",
+	inventory_image = "inspector.png",
 	liquids_pointable = true, -- makes it hard to use underwater.
 
 	on_use = function(itemstack, user, pointed_thing)
