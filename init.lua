@@ -31,8 +31,10 @@ minetest.register_tool("inspector:inspector", {
 				local node = minetest.get_node(pos)
 				desc = "name = " .. node.name .. "\n"
 				local nodedef = minetest.registered_items[node.name]
-				desc = desc .. "drawtype = " .. nodedef.drawtype .. "\n"
-				desc = desc .. "paramtype2 = " .. nodedef.paramtype2 .. "\n"
+				if nodedef then  -- Some built in nodes have no nodedef
+					desc = desc .. "drawtype = " .. nodedef.drawtype .. "\n"
+					desc = desc .. "paramtype2 = " .. nodedef.paramtype2 .. "\n"
+				end
 				desc = desc .. "param1 = " .. node.param1 .. "\n"
 				desc = desc .. "param2 = " .. node.param2 .. "\n"
 				local light = minetest.get_node_light(pointed_thing.above, nil)
