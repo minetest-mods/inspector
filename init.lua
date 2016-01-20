@@ -29,19 +29,22 @@ minetest.register_tool("inspector:inspector", {
 				desc = "..."
 			else
 				local node = minetest.get_node(pos)
-				desc = "name = " .. node.name .. "\n"
-				local nodedef = minetest.registered_items[node.name]
-				if nodedef then  -- Some built in nodes have no nodedef
-					desc = desc .. "drawtype = " .. nodedef.drawtype .. "\n"
-					desc = desc .. "paramtype2 = " .. nodedef.paramtype2 .. "\n"
-				end
+				desc = "===== node data =====\n"
+				desc = desc .. "name = " .. node.name .. "\n"
 				desc = desc .. "param1 = " .. node.param1 .. "\n"
 				desc = desc .. "param2 = " .. node.param2 .. "\n"
 				local light = minetest.get_node_light(pointed_thing.above, nil)
 				desc = desc .. "light = " .. light .. "\n"
+
+				local nodedef = minetest.registered_items[node.name]
+				if nodedef then  -- Some built in nodes have no nodedef
+					desc = desc .. "==== nodedef ====\n"
+					desc = desc .. dump(nodedef) .. "\n"
+				end
 				local meta = minetest.get_meta(pos)
 				local table = meta:to_table()
 				local fields = minetest.serialize(table.fields)
+				desc = desc .. "==== meta ====\n"
 				desc = desc .. "meta.fields = " .. fields .. "\n"
 				desc = desc .. "\n"
 				local inventory = meta:get_inventory()
