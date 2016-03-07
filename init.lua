@@ -36,6 +36,13 @@ minetest.register_tool("inspector:inspector", {
 				local light = minetest.get_node_light(pointed_thing.above, nil)
 				desc = desc .. "light = " .. light .. "\n"
 
+				local timer = minetest.get_node_timer(pos)
+				if timer:get_timeout() ~= 0 then
+				desc = desc .. "==== node timer ====\n"
+				desc = desc .. "timeout = " .. timer:get_timeout() .. "\n"
+				desc = desc .. "elapsed = " .. timer:get_elapsed() .. "\n"
+				end
+
 				local nodedef = minetest.registered_items[node.name]
 				if nodedef then  -- Some built in nodes have no nodedef
 					desc = desc .. "==== nodedef ====\n"
