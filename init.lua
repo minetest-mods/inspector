@@ -17,7 +17,9 @@ local function inspect_pos(pos)
 	desc = desc .. "param1 = " .. node.param1 .. "\n"
 	desc = desc .. "param2 = " .. node.param2 .. "\n"
 	local light = minetest.get_node_light({x = pos.x, y = pos.y + 1, z = pos.x}, nil)
-	desc = desc .. "light = " .. light .. "\n"
+	if light then
+		desc = desc .. "light = " .. light .. "\n"
+	end
 
 	local timer = minetest.get_node_timer(pos)
 	if timer:get_timeout() ~= 0 then
