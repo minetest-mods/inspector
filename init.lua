@@ -114,6 +114,15 @@ minetest.register_tool("inspector:inspector", {
 	end,
 })
 
+minetest.register_craft({
+	output = "inspector:inspector",
+	recipe = {
+		{"group:wood", "group:wood", "group:wood"},
+		{"group:wood", "default:glass", "group:wood"},
+		{"", "default:stick", ""}
+	}
+})
+
 minetest.register_chatcommand("inspect", {
 	params = "inspect",
 	description = "inspect a pos",
