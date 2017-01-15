@@ -8,7 +8,22 @@ it under the terms of the GNU Lesser General Public License as
 published by the Free Software Foundation; either version 2.1
 of the license, or (at your option) any later version.
 
+Additional changes made by Taose © 2017 <https://github.com/Taose>
+
 --]]
+
+--Very much the same as inspect_pos but stripped to basics
+local function inspect_pos_basic(pos)
+	local node = minetest.get_node(pos)
+	local desc = "===== node data =====\n"
+	desc = desc .. "name = " .. node.name .. "\n"
+	
+	local light = minetest.get_node_light({x = pos.x, y = pos.y + 1, z = pos.x}, nil)
+	if light then
+		desc = desc .. "light = " .. light .. "\n"
+	end
+	return desc
+end
 
 local function inspect_pos(pos)
 	local node = minetest.get_node(pos)
@@ -73,7 +88,12 @@ minetest.register_tool("inspector:inspector", {
 			if pointed_thing.type ~= "node" then
 				desc = "..."
 			else
-				desc = inspect_pos(pos)
+				-- Restricting use based on permissions to reduce sending irrelevant data. 
+				if minetest.check_player_privs(pll, {debug=true}) then
+					desc = inspect_pos(pos)
+				else
+					desc = inspect_pos_basic(pos)
+				end
 			end
 
 		elseif pointed_thing.type == "object" then
@@ -92,6 +112,15 @@ minetest.register_tool("inspector:inspector", {
 
 		minetest.show_formspec(user:get_player_name(), "default:team_choose", formspec)
 	end,
+})
+
+minetest.register_craft({
+	output = "inspector:inspector",
+	recipe = {
+		{"group:wood", "group:wood", "group:wood"},
+		{"group:wood", "default:glass", "group:wood"},
+		{"", "default:stick", ""}
+	}
 })
 
 minetest.register_chatcommand("inspect", {
