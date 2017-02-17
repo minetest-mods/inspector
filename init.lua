@@ -84,13 +84,13 @@ minetest.register_tool("inspector:inspector", {
 
 		end
 
-		local formspec = "size[12,8]"..default.gui_bg.. -- default.gui_bg_img..
+		local formspec = "size[12,8]"..
 							 "label[0.5,0.5;Node Information]"..
 							 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
 							 minetest.formspec_escape(desc).."]"..
 							 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		minetest.show_formspec(user:get_player_name(), "default:team_choose", formspec)
+		minetest.show_formspec(user:get_player_name(), "inspector:inspector", formspec)
 	end,
 })
 
@@ -102,13 +102,13 @@ minetest.register_chatcommand("inspect", {
 		local paramlist = string.split(param, " ")
 		local pos = {x = paramlist[1], y = paramlist[2], z = paramlist[3]}
 		local desc = inspect_pos(pos)
-		local formspec = "size[12,8]"..default.gui_bg.. -- default.gui_bg_img..
+		local formspec = "size[12,8]"..
 							 "label[0.5,0.5;Node Information]"..
 							 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
 							 minetest.formspec_escape(desc).."]"..
 							 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		minetest.show_formspec(name, "default:team_choose", formspec)
+		minetest.show_formspec(name, "inspector:inspector", formspec)
 		return true
 	end,
 })
