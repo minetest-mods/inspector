@@ -52,7 +52,7 @@ local function inspect_pos(pos)
 		end
 	end
 
-	return desc
+	return minetest.formspec_escape(desc)
 end
 
 minetest.register_tool("inspector:inspector", {
