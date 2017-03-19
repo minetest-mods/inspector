@@ -10,8 +10,17 @@ of the license, or (at your option) any later version.
 
 --]]
 
+local function make_fs(title, desc)
+	return "size[12,8]"..
+		"label[0.2,0.2;"..title.."]"..
+		"textlist[0.2,1.0;11.5,7;;"..
+		desc:gsub("\n", ",").."]"..
+		"button_exit[11.1,0.2;0.8,0.8;close;x]"
+end
+
 local function inspect_pos(pos)
 	local node = minetest.get_node(pos)
+
 	local desc = "===== node data =====\n"
 	desc = desc .. "name = " .. node.name .. "\n"
 	desc = desc .. "param1 = " .. node.param1 .. "\n"
@@ -22,23 +31,19 @@ local function inspect_pos(pos)
 	end
 
 	local timer = minetest.get_node_timer(pos)
-	if timer:get_timeout() ~= 0 then
-	desc = desc .. "==== node timer ====\n"
-	desc = desc .. "timeout = " .. timer:get_timeout() .. "\n"
-	desc = desc .. "elapsed = " .. timer:get_elapsed() .. "\n"
+		if timer:get_timeout() ~= 0 then
+		desc = desc .. "==== node timer ====\n"
+		desc = desc .. "timeout = " .. timer:get_timeout() .. "\n"
+		desc = desc .. "elapsed = " .. timer:get_elapsed() .. "\n"
 	end
 
-	local nodedef = minetest.registered_items[node.name]
-	if nodedef then  -- Some built in nodes have no nodedef
-		desc = desc .. "==== nodedef ====\n"
-		desc = desc .. dump(nodedef) .. "\n"
-	end
 	local meta = minetest.get_meta(pos)
 	local table = meta:to_table()
 	local fields = minetest.serialize(table.fields)
 	desc = desc .. "==== meta ====\n"
 	desc = desc .. "meta.fields = " .. fields .. "\n"
 	desc = desc .. "\n"
+
 	local inventory = meta:get_inventory()
 	desc = desc .. "meta.inventory = \n"
 	for key, list in pairs(inventory:get_lists()) do
@@ -52,7 +57,13 @@ local function inspect_pos(pos)
 		end
 	end
 
-	return minetest.formspec_escape(desc)
+	local nodedef = minetest.registered_items[node.name]
+	if nodedef then  -- Some built in nodes have no nodedef
+		desc = desc .. "==== nodedef ====\n"
+		desc = desc .. dump(nodedef) .. "\n"
+	end
+
+	return minetest.formspec_escape(desc:gsub(",", "\\,"))
 end
 
 minetest.register_tool("inspector:inspector", {
@@ -63,11 +74,12 @@ minetest.register_tool("inspector:inspector", {
 	on_use = function(itemstack, user, pointed_thing)
 
 		local desc = ""
+		local title = ""
 		if pointed_thing.type == "nothing" then
 			return
 		elseif pointed_thing.type == "node" then
+			title = "Node information"
 
-			local pll = user:get_player_name()
 			local pos = pointed_thing.under
 
 			if pointed_thing.type ~= "node" then
@@ -77,20 +89,15 @@ minetest.register_tool("inspector:inspector", {
 			end
 
 		elseif pointed_thing.type == "object" then
+			title = "Object information"
 
 			local ref = pointed_thing.ref
 			local entity = ref:get_luaentity()
-			desc = dump(entity)
+			desc = minetest.formspec_escape(dump(entity):gsub("\n\n", "\n"))
 
 		end
 
-		local formspec = "size[12,8]"..
-							 "label[0.5,0.5;Node Information]"..
-							 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
-							 minetest.formspec_escape(desc).."]"..
-							 "button_exit[2.5,7.5;3,1;close;Close]"
-
-		minetest.show_formspec(user:get_player_name(), "inspector:inspector", formspec)
+		minetest.show_formspec(user:get_player_name(), "inspector:inspector", make_fs(title, desc))
 	end,
 })
 
@@ -99,16 +106,12 @@ minetest.register_chatcommand("inspect", {
 	description = "inspect a pos",
 	privs = {server = true},
 	func = function(name, param)
-		local paramlist = string.split(param, " ")
+		local paramlist = {}
+		for k in string.gmatch(param, "[^%s]+") do table.insert(paramlist, k) end
 		local pos = {x = paramlist[1], y = paramlist[2], z = paramlist[3]}
 		local desc = inspect_pos(pos)
-		local formspec = "size[12,8]"..
-							 "label[0.5,0.5;Node Information]"..
-							 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
-							 minetest.formspec_escape(desc).."]"..
-							 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		minetest.show_formspec(name, "inspector:inspector", formspec)
+		minetest.show_formspec(name, "inspector:inspector", make_fs("Node information", desc))
 		return true
 	end,
 })
