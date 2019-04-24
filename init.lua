@@ -20,7 +20,6 @@ end
 
 local function inspect_pos(pos)
 	local node = minetest.get_node(pos)
-
 	local desc = "===== node data =====\n"
 	desc = desc .. "name = " .. node.name .. "\n"
 	desc = desc .. "param1 = " .. node.param1 .. "\n"
@@ -31,19 +30,19 @@ local function inspect_pos(pos)
 	end
 
 	local timer = minetest.get_node_timer(pos)
-		if timer:get_timeout() ~= 0 then
-		desc = desc .. "==== node timer ====\n"
-		desc = desc .. "timeout = " .. timer:get_timeout() .. "\n"
-		desc = desc .. "elapsed = " .. timer:get_elapsed() .. "\n"
+	if timer:get_timeout() ~= 0 then
+	desc = desc .. "==== node timer ====\n"
+	desc = desc .. "timeout = " .. timer:get_timeout() .. "\n"
+	desc = desc .. "elapsed = " .. timer:get_elapsed() .. "\n"
 	end
 
+	local nodedef = minetest.registered_items[node.name]
 	local meta = minetest.get_meta(pos)
 	local table = meta:to_table()
 	local fields = minetest.serialize(table.fields)
 	desc = desc .. "==== meta ====\n"
 	desc = desc .. "meta.fields = " .. fields .. "\n"
 	desc = desc .. "\n"
-
 	local inventory = meta:get_inventory()
 	desc = desc .. "meta.inventory = \n"
 	for key, list in pairs(inventory:get_lists()) do
@@ -57,13 +56,12 @@ local function inspect_pos(pos)
 		end
 	end
 
-	local nodedef = minetest.registered_items[node.name]
 	if nodedef then  -- Some built in nodes have no nodedef
 		desc = desc .. "==== nodedef ====\n"
 		desc = desc .. dump(nodedef) .. "\n"
 	end
 
-	return minetest.formspec_escape(desc:gsub(",", "\\,"))
+	return desc
 end
 
 minetest.register_tool("inspector:inspector", {
@@ -74,12 +72,9 @@ minetest.register_tool("inspector:inspector", {
 	on_use = function(itemstack, user, pointed_thing)
 
 		local desc = ""
-		local title = ""
 		if pointed_thing.type == "nothing" then
 			return
 		elseif pointed_thing.type == "node" then
-			title = "Node information"
-
 			local pos = pointed_thing.under
 
 			if pointed_thing.type ~= "node" then
@@ -87,18 +82,47 @@ minetest.register_tool("inspector:inspector", {
 			else
 				desc = inspect_pos(pos)
 			end
-
 		elseif pointed_thing.type == "object" then
-			title = "Object information"
-
 			local ref = pointed_thing.ref
 			local entity = ref:get_luaentity()
-			desc = minetest.formspec_escape(dump(entity):gsub("\n\n", "\n"))
-
+			desc = dump(entity)
 		end
 
-		minetest.show_formspec(user:get_player_name(), "inspector:inspector", make_fs(title, desc))
+		local formspec = "size[12,8]"..
+				 "label[0.5,0.5;Node Information]"..
+				 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
+				 minetest.formspec_escape(desc).."]"..
+				 "button_exit[2.5,7.5;3,1;close;Close]"
+
+		fsc.show(user:get_player_name(), formspec, {}, function() end)
 	end,
+	on_place = function(itemstack, user, pointed_thing)
+
+		local desc = ""
+		if pointed_thing.type == "nothing" then
+			return
+		elseif pointed_thing.type == "node" then
+			local pos = pointed_thing.above
+
+			if pointed_thing.type ~= "node" then
+				desc = "..."
+			else
+				desc = inspect_pos(pos)
+			end
+		elseif pointed_thing.type == "object" then
+			local ref = pointed_thing.ref
+			local entity = ref:get_luaentity()
+			desc = dump(entity)
+		end
+
+		local formspec = "size[12,8]"..
+				 "label[0.5,0.5;Node Information]"..
+				 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
+				 minetest.formspec_escape(desc).."]"..
+				 "button_exit[2.5,7.5;3,1;close;Close]"
+
+		fsc.show(user:get_player_name(), formspec, {}, function() end)
+	end
 })
 
 minetest.register_chatcommand("inspect", {
@@ -107,11 +131,21 @@ minetest.register_chatcommand("inspect", {
 	privs = {server = true},
 	func = function(name, param)
 		local paramlist = {}
-		for k in string.gmatch(param, "[^%s]+") do table.insert(paramlist, k) end
+		for p in string.gmatch(param, "%S+") do
+			paramlist[#paramlist + 1] = p
+		end
 		local pos = {x = paramlist[1], y = paramlist[2], z = paramlist[3]}
+		if not pos.x or not pos.y or not pos.z then
+			return false, "Need 3 parameters for X, Y and Z"
+		end
 		local desc = inspect_pos(pos)
+		local formspec = "size[12,8]"..
+							 "label[0.5,0.5;Node Information]"..
+							 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
+							 minetest.formspec_escape(desc).."]"..
+							 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		minetest.show_formspec(name, "inspector:inspector", make_fs("Node information", desc))
+		fsc.show(name, formspec, {}, function() end)
 		return true
 	end,
 })
