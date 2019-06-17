@@ -125,6 +125,17 @@ minetest.register_tool("inspector:inspector", {
 	end
 })
 
+-- make user-craftable via recipe from Taose fork
+minetest.register_craft({
+	output = "inspector:inspector",
+	recipe = {
+		{"group:wood", "group:wood", "group:wood"},
+		{"group:wood", "default:glass", "group:wood"},
+		{"", "default:stick", ""}
+	}
+})
+-- /end/ make user-craftable via recipe from Taose fork
+
 minetest.register_chatcommand("inspect", {
 	params = "inspect",
 	description = "inspect a pos",
