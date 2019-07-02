@@ -56,22 +56,32 @@ local function inspect_pos(pos)
 		end
 	end
 
+	desc = minetest.formspec_escape(desc)
+
 	if nodedef then  -- Some built in nodes have no nodedef
 
 		-- combine nodedef table with its "superclass" table
+		local combined_fields = {}
 		local nodedef_fields = {}
-		for key, value in pairs(getmetatable(nodedef).__index) do nodedef_fields[key] = value end
+		for key, value in pairs(getmetatable(nodedef).__index) do combined_fields[key] = value end
 		for key, value in pairs(nodedef) do 
-			if nodedef_fields[key] == nil then nodedef_fields[key] = value end
+			nodedef_fields[key] = true
+			if combined_fields[key] == nil then combined_fields[key] = value end
 		end
 
 		-- sort
 		local key_list = {}
-		for key, _ in pairs(nodedef_fields) do table.insert(key_list, key) end
+		for key, _ in pairs(combined_fields) do table.insert(key_list, key) end
 		table.sort(key_list)
 
 		desc = desc .. "==== nodedef ====\n"
-		for _, key in ipairs(key_list) do desc = desc .. key .. " = " .. dump(nodedef[key]) .. "\n" end
+		for _, key in ipairs(key_list) do 
+			if nodedef_fields[key] then 
+				desc = desc .. minetest.formspec_escape(key .. " = " .. dump(nodedef[key]) .. "\n") 
+			else
+				desc = desc .. minetest.colorize("#CCC", key .. " = " .. minetest.formspec_escape(dump(nodedef[key])) .. "\n") 
+			end
+		end
 	end
 
 	return desc
@@ -98,13 +108,13 @@ minetest.register_tool("inspector:inspector", {
 		elseif pointed_thing.type == "object" then
 			local ref = pointed_thing.ref
 			local entity = ref:get_luaentity()
-			desc = dump(entity)
+			desc = minetest.formspec_escape(dump(entity))
 		end
 
 		local formspec = "size[12,8]"..
 				 "label[0.5,0.5;Node Information]"..
 				 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
-				 minetest.formspec_escape(desc).."]"..
+				 desc.."]"..
 				 "button_exit[2.5,7.5;3,1;close;Close]"
 
 		fsc.show(user:get_player_name(), formspec, {}, function() end)
@@ -125,16 +135,17 @@ minetest.register_tool("inspector:inspector", {
 		elseif pointed_thing.type == "object" then
 			local ref = pointed_thing.ref
 			local entity = ref:get_luaentity()
-			desc = dump(entity)
+			desc = minetest.formspec_escape(dump(entity))
 		end
 
 		local formspec = "size[12,8]"..
 				 "label[0.5,0.5;Node Information]"..
 				 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
-				 minetest.formspec_escape(desc).."]"..
+				 desc.."]"..
 				 "button_exit[2.5,7.5;3,1;close;Close]"
 
 		fsc.show(user:get_player_name(), formspec, {}, function() end)
+
 	end
 })
 
@@ -155,7 +166,7 @@ minetest.register_chatcommand("inspect", {
 		local formspec = "size[12,8]"..
 							 "label[0.5,0.5;Node Information]"..
 							 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
-							 minetest.formspec_escape(desc).."]"..
+							 desc.."]"..
 							 "button_exit[2.5,7.5;3,1;close;Close]"
 
 		fsc.show(name, formspec, {}, function() end)
