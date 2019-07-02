@@ -38,8 +38,8 @@ local function inspect_pos(pos)
 
 	local nodedef = minetest.registered_items[node.name]
 	local meta = minetest.get_meta(pos)
-	local table = meta:to_table()
-	local fields = minetest.serialize(table.fields)
+	local metatable = meta:to_table()
+	local fields = minetest.serialize(metatable.fields)
 	desc = desc .. "==== meta ====\n"
 	desc = desc .. "meta.fields = " .. fields .. "\n"
 	desc = desc .. "\n"
@@ -57,8 +57,21 @@ local function inspect_pos(pos)
 	end
 
 	if nodedef then  -- Some built in nodes have no nodedef
+
+		-- combine nodedef table with its "superclass" table
+		local combined_fields = {}
+		for key, value in pairs(getmetatable(nodedef).__index) do combined_fields[key] = value end
+		for key, value in pairs(nodedef) do 
+			if combined_fields[key] == nil then combined_fields[key] = value end
+		end
+
+		-- sort
+		local key_list = {}
+		for key, _ in pairs(combined_fields) do table.insert(key_list, key) end
+		table.sort(key_list)
+
 		desc = desc .. "==== nodedef ====\n"
-		desc = desc .. dump(nodedef) .. "\n"
+		for _, key in ipairs(key_list) do desc = desc .. key .. " = " .. dump(nodedef[key]) .. "\n" end
 	end
 
 	return desc
