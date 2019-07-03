@@ -18,22 +18,34 @@ local function make_fs(title, desc)
 		"button_exit[11.1,0.2;0.8,0.8;close;x]"
 end
 
+local function indent(level, text, emphasize)
+	local result = text
+	for i = 1, level do
+		if emphasize then
+			result = "->  "  .. string.gsub(result, "\n", "\n     ")
+		else 
+			result = "     " .. string.gsub(result, "\n", "\n     ")
+		end
+	end
+	return result
+end
+
 local function inspect_pos(pos)
 	local node = minetest.get_node(pos)
 	local desc = "===== node data =====\n"
-	desc = desc .. "name = " .. node.name .. "\n"
-	desc = desc .. "param1 = " .. node.param1 .. "\n"
-	desc = desc .. "param2 = " .. node.param2 .. "\n"
+	desc = desc .. indent(1, "name = " .. node.name) .. "\n"
+	desc = desc .. indent(1, "param1 = " .. node.param1) .. "\n"
+	desc = desc .. indent(1, "param2 = " .. node.param2) .. "\n"
 	local light = minetest.get_node_light({x = pos.x, y = pos.y + 1, z = pos.x}, nil)
 	if light then
-		desc = desc .. "light = " .. light .. "\n"
+		desc = desc .. indent(1, "light = " .. light) .. "\n"
 	end
 
 	local timer = minetest.get_node_timer(pos)
 	if timer:get_timeout() ~= 0 then
 	desc = desc .. "==== node timer ====\n"
-	desc = desc .. "timeout = " .. timer:get_timeout() .. "\n"
-	desc = desc .. "elapsed = " .. timer:get_elapsed() .. "\n"
+	desc = desc .. indent(1, "timeout = " .. timer:get_timeout()) .. "\n"
+	desc = desc .. indent(1, "elapsed = " .. timer:get_elapsed()) .. "\n"
 	end
 
 	local nodedef = minetest.registered_items[node.name]
@@ -41,17 +53,17 @@ local function inspect_pos(pos)
 	local metatable = meta:to_table()
 	local fields = minetest.serialize(metatable.fields)
 	desc = desc .. "==== meta ====\n"
-	desc = desc .. "meta.fields = " .. fields .. "\n"
+	desc = desc .. indent(1, "meta.fields = " .. fields) .. "\n"
 	desc = desc .. "\n"
 	local inventory = meta:get_inventory()
-	desc = desc .. "meta.inventory = \n"
+	desc = desc .. indent(1, "meta.inventory = ") .. "\n"
 	for key, list in pairs(inventory:get_lists()) do
-		desc = desc .. key .. " : \n"
+		desc = desc .. indent(2, key .. " : ") .. "\n"
 		local size = #list
 		for i = 1, size do
 			local stack = list[i]
 			if not stack:is_empty() then
-				desc = desc .. "\"" .. stack:get_name() .. "\" - " .. stack:get_count() .. "\n"
+				desc = desc .. indent(3, "\"" .. stack:get_name() .. "\" - " .. stack:get_count()) .. "\n"
 			end
 		end
 	end
@@ -60,8 +72,10 @@ local function inspect_pos(pos)
 
 		-- combine nodedef table with its "superclass" table
 		local combined_fields = {}
+		local nodedef_fields = {}
 		for key, value in pairs(getmetatable(nodedef).__index) do combined_fields[key] = value end
-		for key, value in pairs(nodedef) do 
+		for key, value in pairs(nodedef) do
+			nodedef_fields[key] = true
 			if combined_fields[key] == nil then combined_fields[key] = value end
 		end
 
@@ -71,7 +85,9 @@ local function inspect_pos(pos)
 		table.sort(key_list)
 
 		desc = desc .. "==== nodedef ====\n"
-		for _, key in ipairs(key_list) do desc = desc .. key .. " = " .. dump(nodedef[key]) .. "\n" end
+		for _, key in ipairs(key_list) do 
+			desc = desc .. indent(1, key .. " = " .. dump(nodedef[key]), nodedef_fields[key]) .. "\n"
+		end
 	end
 
 	return desc
