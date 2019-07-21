@@ -18,15 +18,23 @@ local function make_fs(title, desc)
 		"button_exit[11.1,0.2;0.8,0.8;close;x]"
 end
 
+local indent_string = "     "
+
 local function indent(level, text, emphasize)
 	local result = text
 	for i = 1, level do
 		if emphasize then
-			result = "->  "  .. string.gsub(result, "\n", "\n     ")
+			result = "->  "        .. string.gsub(result, "\n", "\n" .. indent_string)
 		else 
-			result = "     " .. string.gsub(result, "\n", "\n     ")
+			result = indent_string .. string.gsub(result, "\n", "\n" .. indent_string)
 		end
 	end
+	return result
+end
+
+local function adjusted_dump(o)
+	local result = dump(o, indent_string)
+	if result == "{\n" .. indent_string .. "\n}" then result = "{}" end
 	return result
 end
 
@@ -51,10 +59,8 @@ local function inspect_pos(pos)
 	local nodedef = minetest.registered_items[node.name]
 	local meta = minetest.get_meta(pos)
 	local metatable = meta:to_table()
-	local fields = minetest.serialize(metatable.fields)
 	desc = desc .. "==== meta ====\n"
-	desc = desc .. indent(1, "meta.fields = " .. fields) .. "\n"
-	desc = desc .. "\n"
+	desc = desc .. indent(1, "meta.fields = " .. adjusted_dump(metatable.fields)) .. "\n"
 	local inventory = meta:get_inventory()
 	desc = desc .. indent(1, "meta.inventory = ") .. "\n"
 	for key, list in pairs(inventory:get_lists()) do
@@ -86,7 +92,7 @@ local function inspect_pos(pos)
 
 		desc = desc .. "==== nodedef ====\n"
 		for _, key in ipairs(key_list) do 
-			desc = desc .. indent(1, key .. " = " .. dump(nodedef[key]), nodedef_fields[key]) .. "\n"
+			desc = desc .. indent(1, key .. " = " .. adjusted_dump(nodedef[key]), nodedef_fields[key]) .. "\n"
 		end
 	end
 
