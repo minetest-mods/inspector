@@ -44,7 +44,7 @@ local function inspect_pos(pos)
 	desc = desc .. indent(1, "name = " .. node.name) .. "\n"
 	desc = desc .. indent(1, "param1 = " .. node.param1) .. "\n"
 	desc = desc .. indent(1, "param2 = " .. node.param2) .. "\n"
-	local light = minetest.get_node_light({x = pos.x, y = pos.y + 1, z = pos.x}, nil)
+	local light = minetest.get_node_light({x = pos.x, y = pos.y + 1, z = pos.z}, nil)
 	if light then
 		desc = desc .. indent(1, "light = " .. light) .. "\n"
 	end
