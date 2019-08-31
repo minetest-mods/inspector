@@ -106,6 +106,8 @@ minetest.register_tool("inspector:inspector", {
 
 	on_use = function(itemstack, user, pointed_thing)
 
+		local t = "Node"
+
 		local desc = ""
 		if pointed_thing.type == "nothing" then
 			return
@@ -119,12 +121,16 @@ minetest.register_tool("inspector:inspector", {
 			end
 		elseif pointed_thing.type == "object" then
 			local ref = pointed_thing.ref
-			local entity = ref:get_luaentity()
-			desc = dump(entity)
+			local obj = ref:get_properties()
+			if ref.get_physics_override then
+				obj.physics_override = ref:get_physics_override()
+			end
+			desc = adjusted_dump(obj)
+			t = "Entity"
 		end
 
 		local formspec = "size[12,8]"..
-				 "label[0.5,0.5;Node Information]"..
+				 "label[0.5,0.5;" .. t .. " Information]"..
 				 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
 				 minetest.formspec_escape(desc).."]"..
 				 "button_exit[2.5,7.5;3,1;close;Close]"
