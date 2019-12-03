@@ -38,15 +38,100 @@ local function adjusted_dump(o)
 	return result
 end
 
+-- Left-align or Right-align a numeric value by padding it with Figure-width spaces until the string is maxDigits long.
+local function pad_figure(value, maxDigits, padLeft)
+	local valueStr = tostring(value)
+	local padding = string.rep("\u{7D7}", maxDigits - valueStr:len())
+	if padLeft then
+		return padding .. valueStr
+	else
+		return valueStr .. padding
+	end
+end
+
+local function describe_param(paramtype, value)
+
+	local upper4bits = math.floor(value / 16)
+	local lower4bits = value - upper4bits * 16
+	local upper5bits = math.floor(value /  8)
+	local lower3bits = value - upper5bits *  8
+	local upper3bits = math.floor(value /  32)
+	local lower5bits = value - upper3bits *  32
+
+	local prefix = "storing " .. paramtype .. ": "
+
+	if paramtype == "none" then
+		return ""
+
+	elseif paramtype == "light" then
+		-- lua_api.txt says "The value stores light with and without sun in its upper and lower 4 bits respectively", but it
+		-- looks to me like it's the other way around, and the lower 4 bits store the "with sun" value.
+		return prefix .. lower4bits .. " with sun, " .. upper4bits .. " without sun"
+
+	elseif paramtype == "flowingliquid" then
+		if lower4bits >= 8 then -- Flag 0x08 is "liquid flow down", i.e. there's no node underneath the flowing liquid node
+			return prefix .. "liquid level " .. (lower3bits + 1) .. " of 8, with vertical downflow"
+		else
+			return prefix .. "liquid level " .. (lower3bits + 1) .. " of 8, without vertical downflow"
+		end
+
+	elseif paramtype == "degrotate" then
+		return prefix .. "rotation of " .. value * 2 .. "°"
+
+	elseif paramtype == "facedir" or paramtype == "colorfacedir" then
+		local axisDirection = math.floor(lower5bits / 4)
+		local rotation = lower5bits % 4
+		local axisDesc = {"up, +Y","North, +Z","South, -Z","East, +X","West, -X","down, -Y"}
+		local colorInfo = ""
+		if paramtype == "colorfacedir" then colorInfo = ", color " .. upper3bits end
+		return prefix .. "axis-direction " .. axisDirection .. " (" .. axisDesc[axisDirection + 1] ..
+			"), rotation " .. rotation .. " (" .. (rotation * 90) .. "°)" .. colorInfo
+
+	elseif paramtype == "wallmounted" or paramtype == "colorwallmounted" then
+		local direction = lower3bits
+		local axisDesc = {"face down, -Y", "face up, +Y","facing West, -X","facing East, +X","facing South, -Z","facing North, +Z"}
+		local colorInfo = ""
+		if paramtype == "colorwallmounted" then colorInfo = ", color index " .. upper5bits end
+		return prefix .. "direction " .. direction .. " (" .. axisDesc[direction + 1] .. ")" .. colorInfo
+
+	elseif paramtype == "meshoptions" then
+		local shape = lower3bits
+		local shapeDesc = {"x","+","*","#","# with faces leaning out","?unknown?","?unknown?","?unknown?"}
+		local result = prefix .. "shape " .. shapeDesc[shape + 1]
+		if lower4bits >= 8  then result = result .. ", horz. variance" end
+		if lower5bits >= 16 then result = result .. ", enlarged 1.4x" end
+		if upper3bits % 2 == 1 then result = result .. ", vert. variance" end
+		return result
+
+	elseif paramtype == "color" then
+		return "storing color index"
+
+	elseif paramtype == "glasslikeliquidlevel" then
+		return prefix .. "liquid level " .. value .. " (" .. math.floor(value * 1000 / 63 + 0.5) / 10.0 .. "%)"
+
+	end
+
+	return ""
+end
+
 local function inspect_pos(pos)
-	local node = minetest.get_node(pos)
+	local node    = minetest.get_node(pos)
+	local nodedef = minetest.registered_items[node.name]
+
 	local desc = "===== node data =====\n"
 	desc = desc .. indent(1, "name = " .. node.name) .. "\n"
-	desc = desc .. indent(1, "param1 = " .. node.param1) .. "\n"
-	desc = desc .. indent(1, "param2 = " .. node.param2) .. "\n"
-	local light = minetest.get_node_light({x = pos.x, y = pos.y + 1, z = pos.z}, nil)
-	if light then
-		desc = desc .. indent(1, "light = " .. light) .. "\n"
+	desc = desc .. indent(1, "param1 = " .. pad_figure(node.param1, 3) .. indent_string ..
+		describe_param(nodedef.paramtype,  node.param1)) .. "\n"
+	desc = desc .. indent(1, "param2 = " .. pad_figure(node.param2, 3) .. indent_string ..
+		describe_param(nodedef.paramtype2, node.param2)) .. "\n"
+
+	local posAbove = {x = pos.x, y = pos.y + 1, z = pos.z}
+	local light_current = minetest.get_node_light(posAbove, nil)
+	local light_noon    = minetest.get_node_light(posAbove, 0.5)
+	local light_night   = minetest.get_node_light(posAbove, 0)
+	if light_current ~= nil then
+		desc = desc .. indent(1, "light = " .. pad_figure(light_current, 2)) ..
+			"           (" .. light_noon .. " at noon, " .. light_night .." at night)\n"
 	end
 
 	local timer = minetest.get_node_timer(pos)
@@ -56,7 +141,6 @@ local function inspect_pos(pos)
 	desc = desc .. indent(1, "elapsed = " .. timer:get_elapsed()) .. "\n"
 	end
 
-	local nodedef = minetest.registered_items[node.name]
 	local meta = minetest.get_meta(pos)
 	local metatable = meta:to_table()
 	desc = desc .. "==== meta ====\n"
