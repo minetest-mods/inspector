@@ -115,7 +115,7 @@ local function describe_param(paramtype, value)
 	return ""
 end
 
-local function inspect_pos(pos)
+local function inspect_pos(pos, light_pos)
 	local node    = minetest.get_node(pos)
 	local nodedef = minetest.registered_items[node.name]
 
@@ -126,10 +126,10 @@ local function inspect_pos(pos)
 	desc = desc .. indent(1, "param2 = " .. pad_figure(node.param2, 3) .. indent_string ..
 		describe_param(nodedef.paramtype2, node.param2)) .. "\n"
 
-	local posAbove = {x = pos.x, y = pos.y + 1, z = pos.z}
-	local light_current = minetest.get_node_light(posAbove, nil)
-	local light_noon    = minetest.get_node_light(posAbove, 0.5)
-	local light_night   = minetest.get_node_light(posAbove, 0)
+	if light_pos == nil then light_pos = {x = pos.x, y = pos.y + 1, z = pos.z} end
+	local light_current = minetest.get_node_light(light_pos, nil)
+	local light_noon    = minetest.get_node_light(light_pos, 0.5)
+	local light_night   = minetest.get_node_light(light_pos, 0)
 	if light_current ~= nil then
 		desc = desc .. indent(1, "light = " .. pad_figure(light_current, 2)) ..
 			"            " .. light_noon .. " at noon, " .. light_night .." at night\n"
@@ -220,7 +220,7 @@ minetest.register_tool("inspector:inspector", {
 			if pointed_thing.type ~= "node" then
 				desc = "..."
 			else
-				desc = inspect_pos(pos)
+				desc = inspect_pos(pos, pointed_thing.above)
 			end
 		elseif pointed_thing.type == "object" then
 			local ref = pointed_thing.ref
@@ -251,7 +251,7 @@ minetest.register_tool("inspector:inspector", {
 			if pointed_thing.type ~= "node" then
 				desc = "..."
 			else
-				desc = inspect_pos(pos)
+				desc = inspect_pos(pos, pos)
 			end
 		elseif pointed_thing.type == "object" then
 			local ref = pointed_thing.ref
