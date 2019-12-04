@@ -25,7 +25,7 @@ local function indent(level, text, emphasize)
 	for i = 1, level do
 		if emphasize then
 			result = "->  "        .. string.gsub(result, "\n", "\n" .. indent_string)
-		else 
+		else
 			result = indent_string .. string.gsub(result, "\n", "\n" .. indent_string)
 		end
 	end
@@ -38,10 +38,10 @@ local function adjusted_dump(o)
 	return result
 end
 
--- Left-align or Right-align a numeric value by padding it with Figure-width spaces until the string is maxDigits long.
+-- Left-align or right-align a numeric value by padding it with Figure-width spaces until the string is maxDigits long.
 local function pad_figure(value, maxDigits, padLeft)
 	local valueStr = tostring(value)
-	local padding = string.rep("\u{7D7}", maxDigits - valueStr:len())
+	local padding = string.rep("\u{2007}", maxDigits - valueStr:len())
 	if padLeft then
 		return padding .. valueStr
 	else
@@ -51,12 +51,12 @@ end
 
 local function describe_param(paramtype, value)
 
+	local upper5bits = math.floor(value / 8)
 	local upper4bits = math.floor(value / 16)
+	local upper3bits = math.floor(value / 32)
+	local lower3bits = value - upper5bits * 8
 	local lower4bits = value - upper4bits * 16
-	local upper5bits = math.floor(value /  8)
-	local lower3bits = value - upper5bits *  8
-	local upper3bits = math.floor(value /  32)
-	local lower5bits = value - upper3bits *  32
+	local lower5bits = value - upper3bits * 32
 
 	local prefix = "storing " .. paramtype .. ": "
 
@@ -96,10 +96,11 @@ local function describe_param(paramtype, value)
 
 	elseif paramtype == "meshoptions" then
 		local shape = lower3bits
-		local shapeDesc = {"x","+","*","#","# with faces leaning out","?unknown?","?unknown?","?unknown?"}
-		local result = prefix .. "shape " .. shapeDesc[shape + 1]
-		if lower4bits >= 8  then result = result .. ", horz. variance" end
-		if lower5bits >= 16 then result = result .. ", enlarged 1.4x" end
+		local shapeDesc = {"X","\u{253c}","*","#","#","?unknown?","?unknown?","?unknown?"}
+		local result = prefix .. shapeDesc[shape + 1] .. " shaped"
+		if shape == 4          then result = result .. " with faces leaning out" end
+		if lower4bits >= 8     then result = result .. ", horz. variance" end
+		if lower5bits >= 16    then result = result .. ", enlarged 1.4x"  end
 		if upper3bits % 2 == 1 then result = result .. ", vert. variance" end
 		return result
 
@@ -107,7 +108,7 @@ local function describe_param(paramtype, value)
 		return "storing color index"
 
 	elseif paramtype == "glasslikeliquidlevel" then
-		return prefix .. "liquid level " .. value .. " (" .. math.floor(value * 1000 / 63 + 0.5) / 10.0 .. "%)"
+		return prefix .. "liquid level " .. value .. " (" .. math.floor(value * 1000 / 63 + 0.5) / 10 .. "%)"
 
 	end
 
@@ -131,7 +132,7 @@ local function inspect_pos(pos)
 	local light_night   = minetest.get_node_light(posAbove, 0)
 	if light_current ~= nil then
 		desc = desc .. indent(1, "light = " .. pad_figure(light_current, 2)) ..
-			"           (" .. light_noon .. " at noon, " .. light_night .." at night)\n"
+			"            " .. light_noon .. " at noon, " .. light_night .." at night\n"
 	end
 
 	local timer = minetest.get_node_timer(pos)
