@@ -96,6 +96,24 @@ local function inspect_pos(pos)
 		end
 	end
 
+	desc = desc .. "\n==== Location ====\n"
+	desc = desc .. indent(1, "position = " .. minetest.pos_to_string(pos)) .. "\n"
+	if minetest.get_biome_data ~= nil and minetest.registered_biomes ~= nil then
+		local biomeData = minetest.get_biome_data(pos)
+
+		desc = desc .. indent(1, "heat = "     .. tostring(biomeData.heat))     .."\n"
+		desc = desc .. indent(1, "humidity = " .. tostring(biomeData.humidity)) .. "\n"
+		local biomeDescription = "<none>"
+		if biomeData.biome ~= nil then
+			local biomeName = minetest.get_biome_name(biomeData.biome)
+			biomeDescription = biomeName
+
+			local biomeTable = minetest.registered_biomes[biomeName]
+			if biomeTable ~= nil then biomeDescription = biomeDescription .. " " .. adjusted_dump(biomeTable) end
+		end
+		desc = desc .. indent(1, "biome = " .. biomeDescription) .. "\n"
+	end
+
 	return desc
 end
 
