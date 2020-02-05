@@ -307,9 +307,12 @@ minetest.register_chatcommand("inspect", {
 })
 
 local function inspect_item(itemstack)
+	local desc = "==== count ====\n"
+	desc = desc .. indent(1, "count = " .. itemstack:get_count()) .. "\n"
+
 	local meta = itemstack:get_meta()
 	local metatable = meta:to_table()
-	local desc = "==== meta ====\n"
+	desc = desc .. "==== meta ====\n"
 	desc = desc .. indent(1, "meta.fields = " .. adjusted_dump(metatable.fields)) .. "\n"
 	
 	local itemdef = itemstack:get_definition()
