@@ -10,6 +10,18 @@ of the license, or (at your option) any later version.
 
 --]]
 
+local fsc_modpath = minetest.get_modpath("fsc")
+local function show_formspec(player_name, formspec)
+	if fsc_modpath then
+		fsc.show(player_name, formspec, {}, function() end)
+	else
+		-- none of Inspector's formspecs have player response handlers, so
+		-- the name doesn't really matter.
+		minetest.show_formspec(player_name, "inspector:formspec", formspec)
+	end
+end
+
+
 local function make_fs(title, desc)
 	return "size[12,8]"..
 		"label[0.2,0.2;"..title.."]"..
@@ -238,7 +250,7 @@ minetest.register_tool("inspector:inspector", {
 				 minetest.formspec_escape(desc).."]"..
 				 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		fsc.show(user:get_player_name(), formspec, {}, function() end)
+		show_formspec(user:get_player_name(), formspec)
 	end,
 	on_place = function(itemstack, user, pointed_thing)
 
@@ -265,7 +277,7 @@ minetest.register_tool("inspector:inspector", {
 				 minetest.formspec_escape(desc).."]"..
 				 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		fsc.show(user:get_player_name(), formspec, {}, function() end)
+		show_formspec(user:get_player_name(), formspec)
 	end
 })
 
@@ -289,7 +301,78 @@ minetest.register_chatcommand("inspect", {
 							 minetest.formspec_escape(desc).."]"..
 							 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		fsc.show(name, formspec, {}, function() end)
+		show_formspec(name, formspec)
+		return true
+	end,
+})
+
+local function inspect_item(itemstack)
+	local meta = itemstack:get_meta()
+	local metatable = meta:to_table()
+	local desc = "==== meta ====\n"
+	desc = desc .. indent(1, "meta.fields = " .. adjusted_dump(metatable.fields)) .. "\n"
+	
+	local itemdef = itemstack:get_definition()
+	-- combine itemdef table with its "superclass" table
+	local combined_fields = {}
+	local nodedef_fields = {}
+	for key, value in pairs(getmetatable(itemdef).__index) do combined_fields[key] = value end
+	for key, value in pairs(itemdef) do
+		nodedef_fields[key] = true
+		if combined_fields[key] == nil then combined_fields[key] = value end
+	end
+
+	-- sort
+	local key_list = {}
+	for key, _ in pairs(combined_fields) do table.insert(key_list, key) end
+	table.sort(key_list)
+
+	desc = desc .. "==== itemdef ====\n"
+	for _, key in ipairs(key_list) do 
+		desc = desc .. indent(1, key .. " = " .. adjusted_dump(itemdef[key]), nodedef_fields[key]) .. "\n"
+	end
+	return desc
+end
+
+local function make_item_fs(player_name, title, desc)
+	title = title or ""
+	desc = desc or ""
+
+	return "size[12,11]"
+		.. "label[0.2,0.2;"..title.."]"
+		.. "textlist[0.2,1.0;11.5,6;;"
+		.. minetest.formspec_escape(desc):gsub("\n", ",").."]"
+		.. "list[detached:inspector_"..player_name..";item;10.75,7.25;1,1;]"
+		.. "list[current_player;main;2,7.25;8,4;]"
+		.. "listring[]"
+		.. "button_exit[11.1,0.2;0.8,0.8;close;x]"
+end
+
+minetest.register_on_joinplayer(function(player)
+	local player_name = player:get_player_name()
+	local inv = minetest.create_detached_inventory("inspector_"..player_name, {
+		allow_put = function(inv, listname, index, stack, inv_player)
+			local inv_player_name = inv_player:get_player_name()
+			local desc = inspect_item(stack)
+			local formspec = make_item_fs(inv_player_name, stack:get_name(), desc)
+			show_formspec(inv_player_name, formspec)
+			return 0
+		end,
+	})
+	inv:set_size("item", 1)
+end)
+
+minetest.register_on_leaveplayer(function(player, timed_out)
+	local player_name = player:get_player_name()
+	minetest.remove_detached_inventory("inspector_"..player_name)
+end)
+
+minetest.register_chatcommand("inspect_item", {
+	description = "inspect an item",
+	privs = {server = true},
+	func = function(name, param)
+		local formspec = make_item_fs(name)
+		show_formspec(name, formspec)
 		return true
 	end,
 })
