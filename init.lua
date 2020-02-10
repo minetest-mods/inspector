@@ -130,13 +130,18 @@ end
 local function inspect_pos(pos, light_pos)
 	local node    = minetest.get_node(pos)
 	local nodedef = minetest.registered_items[node.name]
-
 	local desc = "===== node data =====\n"
 	desc = desc .. indent(1, "name = " .. node.name) .. "\n"
+	local param1type = "param1"
+	local param2type = "param2"
+	if nodedef then
+		param1type = nodedef.paramtype
+		param2type = nodedef.paramtype2
+	end
 	desc = desc .. indent(1, "param1 = " .. pad_figure(node.param1, 3) .. indent_string ..
-		describe_param(nodedef.paramtype,  node.param1)) .. "\n"
+		describe_param(param1type,  node.param1)) .. "\n"
 	desc = desc .. indent(1, "param2 = " .. pad_figure(node.param2, 3) .. indent_string ..
-		describe_param(nodedef.paramtype2, node.param2)) .. "\n"
+		describe_param(param2type, node.param2)) .. "\n"
 
 	if light_pos == nil then light_pos = {x = pos.x, y = pos.y + 1, z = pos.z} end
 	local light_current = minetest.get_node_light(light_pos, nil)
