@@ -95,7 +95,9 @@ local function describe_param(paramtype, value)
 		local rotation = lower5bits % 4
 		local axisDesc = {"up, +Y","North, +Z","South, -Z","East, +X","West, -X","down, -Y"}
 		local colorInfo = ""
-		if paramtype == "colorfacedir" then colorInfo = ", color " .. upper3bits end
+		if paramtype == "colorfacedir" then
+			colorInfo = ", color " .. upper3bits
+		end
 		return prefix .. "axis-direction " .. axisDirection .. " (" .. axisDesc[axisDirection + 1] ..
 			"), rotation " .. rotation .. " (" .. (rotation * 90) .. "°)" .. colorInfo
 
@@ -103,7 +105,9 @@ local function describe_param(paramtype, value)
 		local direction = lower3bits
 		local axisDesc = {"face down, -Y", "face up, +Y","facing West, -X","facing East, +X","facing South, -Z","facing North, +Z"}
 		local colorInfo = ""
-		if paramtype == "colorwallmounted" then colorInfo = ", color index " .. upper5bits end
+		if paramtype == "colorwallmounted" then
+			colorInfo = ", color index " .. upper5bits
+		end
 		return prefix .. "direction " .. direction .. " (" .. axisDesc[direction + 1] .. ")" .. colorInfo
 
 	elseif paramtype == "meshoptions" then
@@ -143,7 +147,9 @@ local function inspect_pos(pos, light_pos)
 	desc = desc .. indent(1, "param2 = " .. pad_figure(node.param2, 3) .. indent_string ..
 		describe_param(param2type, node.param2)) .. "\n"
 
-	if light_pos == nil then light_pos = {x = pos.x, y = pos.y + 1, z = pos.z} end
+	if light_pos == nil then
+		light_pos = {x = pos.x, y = pos.y + 1, z = pos.z}
+	end
 	local light_current = minetest.get_node_light(light_pos, nil)
 	local light_noon    = minetest.get_node_light(light_pos, 0.5)
 	local light_night   = minetest.get_node_light(light_pos, 0)
@@ -154,9 +160,9 @@ local function inspect_pos(pos, light_pos)
 
 	local timer = minetest.get_node_timer(pos)
 	if timer:get_timeout() ~= 0 then
-	desc = desc .. "==== node timer ====\n"
-	desc = desc .. indent(1, "timeout = " .. timer:get_timeout()) .. "\n"
-	desc = desc .. indent(1, "elapsed = " .. timer:get_elapsed()) .. "\n"
+		desc = desc .. "==== node timer ====\n"
+		desc = desc .. indent(1, "timeout = " .. timer:get_timeout()) .. "\n"
+		desc = desc .. indent(1, "elapsed = " .. timer:get_elapsed()) .. "\n"
 	end
 
 	local meta = minetest.get_meta(pos)
@@ -181,15 +187,21 @@ local function inspect_pos(pos, light_pos)
 		-- combine nodedef table with its "superclass" table
 		local combined_fields = {}
 		local nodedef_fields = {}
-		for key, value in pairs(getmetatable(nodedef).__index) do combined_fields[key] = value end
+		for key, value in pairs(getmetatable(nodedef).__index) do
+			combined_fields[key] = value
+		end
 		for key, value in pairs(nodedef) do
 			nodedef_fields[key] = true
-			if combined_fields[key] == nil then combined_fields[key] = value end
+			if combined_fields[key] == nil then
+				combined_fields[key] = value
+			end
 		end
 
 		-- sort
 		local key_list = {}
-		for key, _ in pairs(combined_fields) do table.insert(key_list, key) end
+		for key, _ in pairs(combined_fields) do
+			table.insert(key_list, key)
+		end
 		table.sort(key_list)
 
 		desc = desc .. "==== nodedef ====\n"
@@ -324,15 +336,21 @@ local function inspect_item(itemstack)
 	-- combine itemdef table with its "superclass" table
 	local combined_fields = {}
 	local nodedef_fields = {}
-	for key, value in pairs(getmetatable(itemdef).__index) do combined_fields[key] = value end
+	for key, value in pairs(getmetatable(itemdef).__index) do
+		combined_fields[key] = value
+	end
 	for key, value in pairs(itemdef) do
 		nodedef_fields[key] = true
-		if combined_fields[key] == nil then combined_fields[key] = value end
+		if combined_fields[key] == nil then
+			combined_fields[key] = value
+		end
 	end
 
 	-- sort
 	local key_list = {}
-	for key, _ in pairs(combined_fields) do table.insert(key_list, key) end
+	for key, _ in pairs(combined_fields) do
+		table.insert(key_list, key)
+	end
 	table.sort(key_list)
 
 	desc = desc .. "==== itemdef ====\n"
