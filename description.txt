@@ -1,1 +1,0 @@
-An in-game tool to inspect node parameters and metadata.

@@ -10,6 +10,18 @@ of the license, or (at your option) any later version.
 
 --]]
 
+local fsc_modpath = minetest.get_modpath("fsc")
+local function show_formspec(player_name, formspec)
+	if fsc_modpath then
+		fsc.show(player_name, formspec, {}, function() end)
+	else
+		-- none of Inspector's formspecs have player response handlers, so
+		-- the name doesn't really matter.
+		minetest.show_formspec(player_name, "inspector:formspec", formspec)
+	end
+end
+
+
 local function make_fs(title, desc)
 	return "size[12,8]"..
 		"label[0.2,0.2;"..title.."]"..
@@ -83,7 +95,9 @@ local function describe_param(paramtype, value)
 		local rotation = lower5bits % 4
 		local axisDesc = {"up, +Y","North, +Z","South, -Z","East, +X","West, -X","down, -Y"}
 		local colorInfo = ""
-		if paramtype == "colorfacedir" then colorInfo = ", color " .. upper3bits end
+		if paramtype == "colorfacedir" then
+			colorInfo = ", color " .. upper3bits
+		end
 		return prefix .. "axis-direction " .. axisDirection .. " (" .. axisDesc[axisDirection + 1] ..
 			"), rotation " .. rotation .. " (" .. (rotation * 90) .. "°)" .. colorInfo
 
@@ -91,7 +105,9 @@ local function describe_param(paramtype, value)
 		local direction = lower3bits
 		local axisDesc = {"face down, -Y", "face up, +Y","facing West, -X","facing East, +X","facing South, -Z","facing North, +Z"}
 		local colorInfo = ""
-		if paramtype == "colorwallmounted" then colorInfo = ", color index " .. upper5bits end
+		if paramtype == "colorwallmounted" then
+			colorInfo = ", color index " .. upper5bits
+		end
 		return prefix .. "direction " .. direction .. " (" .. axisDesc[direction + 1] .. ")" .. colorInfo
 
 	elseif paramtype == "meshoptions" then
@@ -118,15 +134,22 @@ end
 local function inspect_pos(pos, light_pos)
 	local node    = minetest.get_node(pos)
 	local nodedef = minetest.registered_items[node.name]
-
 	local desc = "===== node data =====\n"
 	desc = desc .. indent(1, "name = " .. node.name) .. "\n"
+	local param1type = "param1"
+	local param2type = "param2"
+	if nodedef then
+		param1type = nodedef.paramtype
+		param2type = nodedef.paramtype2
+	end
 	desc = desc .. indent(1, "param1 = " .. pad_figure(node.param1, 3) .. indent_string ..
-		describe_param(nodedef.paramtype,  node.param1)) .. "\n"
+		describe_param(param1type,  node.param1)) .. "\n"
 	desc = desc .. indent(1, "param2 = " .. pad_figure(node.param2, 3) .. indent_string ..
-		describe_param(nodedef.paramtype2, node.param2)) .. "\n"
+		describe_param(param2type, node.param2)) .. "\n"
 
-	if light_pos == nil then light_pos = {x = pos.x, y = pos.y + 1, z = pos.z} end
+	if light_pos == nil then
+		light_pos = {x = pos.x, y = pos.y + 1, z = pos.z}
+	end
 	local light_current = minetest.get_node_light(light_pos, nil)
 	local light_noon    = minetest.get_node_light(light_pos, 0.5)
 	local light_night   = minetest.get_node_light(light_pos, 0)
@@ -137,9 +160,9 @@ local function inspect_pos(pos, light_pos)
 
 	local timer = minetest.get_node_timer(pos)
 	if timer:get_timeout() ~= 0 then
-	desc = desc .. "==== node timer ====\n"
-	desc = desc .. indent(1, "timeout = " .. timer:get_timeout()) .. "\n"
-	desc = desc .. indent(1, "elapsed = " .. timer:get_elapsed()) .. "\n"
+		desc = desc .. "==== node timer ====\n"
+		desc = desc .. indent(1, "timeout = " .. timer:get_timeout()) .. "\n"
+		desc = desc .. indent(1, "elapsed = " .. timer:get_elapsed()) .. "\n"
 	end
 
 	local meta = minetest.get_meta(pos)
@@ -164,15 +187,21 @@ local function inspect_pos(pos, light_pos)
 		-- combine nodedef table with its "superclass" table
 		local combined_fields = {}
 		local nodedef_fields = {}
-		for key, value in pairs(getmetatable(nodedef).__index) do combined_fields[key] = value end
+		for key, value in pairs(getmetatable(nodedef).__index) do
+			combined_fields[key] = value
+		end
 		for key, value in pairs(nodedef) do
 			nodedef_fields[key] = true
-			if combined_fields[key] == nil then combined_fields[key] = value end
+			if combined_fields[key] == nil then
+				combined_fields[key] = value
+			end
 		end
 
 		-- sort
 		local key_list = {}
-		for key, _ in pairs(combined_fields) do table.insert(key_list, key) end
+		for key, _ in pairs(combined_fields) do
+			table.insert(key_list, key)
+		end
 		table.sort(key_list)
 
 		desc = desc .. "==== nodedef ====\n"
@@ -238,7 +267,7 @@ minetest.register_tool("inspector:inspector", {
 				 minetest.formspec_escape(desc).."]"..
 				 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		fsc.show(user:get_player_name(), formspec, {}, function() end)
+		show_formspec(user:get_player_name(), formspec)
 	end,
 	on_place = function(itemstack, user, pointed_thing)
 
@@ -265,7 +294,7 @@ minetest.register_tool("inspector:inspector", {
 				 minetest.formspec_escape(desc).."]"..
 				 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		fsc.show(user:get_player_name(), formspec, {}, function() end)
+		show_formspec(user:get_player_name(), formspec)
 	end
 })
 
@@ -289,7 +318,87 @@ minetest.register_chatcommand("inspect", {
 							 minetest.formspec_escape(desc).."]"..
 							 "button_exit[2.5,7.5;3,1;close;Close]"
 
-		fsc.show(name, formspec, {}, function() end)
+		show_formspec(name, formspec)
+		return true
+	end,
+})
+
+local function inspect_item(itemstack)
+	local desc = "==== count ====\n"
+	desc = desc .. indent(1, "count = " .. itemstack:get_count()) .. "\n"
+
+	local meta = itemstack:get_meta()
+	local metatable = meta:to_table()
+	desc = desc .. "==== meta ====\n"
+	desc = desc .. indent(1, "meta.fields = " .. adjusted_dump(metatable.fields)) .. "\n"
+	
+	local itemdef = itemstack:get_definition()
+	-- combine itemdef table with its "superclass" table
+	local combined_fields = {}
+	local nodedef_fields = {}
+	for key, value in pairs(getmetatable(itemdef).__index) do
+		combined_fields[key] = value
+	end
+	for key, value in pairs(itemdef) do
+		nodedef_fields[key] = true
+		if combined_fields[key] == nil then
+			combined_fields[key] = value
+		end
+	end
+
+	-- sort
+	local key_list = {}
+	for key, _ in pairs(combined_fields) do
+		table.insert(key_list, key)
+	end
+	table.sort(key_list)
+
+	desc = desc .. "==== itemdef ====\n"
+	for _, key in ipairs(key_list) do 
+		desc = desc .. indent(1, key .. " = " .. adjusted_dump(itemdef[key]), nodedef_fields[key]) .. "\n"
+	end
+	return desc
+end
+
+local function make_item_fs(player_name, title, desc)
+	title = title or ""
+	desc = desc or ""
+
+	return "size[12,11]"
+		.. "label[0.2,0.2;"..title.."]"
+		.. "textlist[0.2,1.0;11.5,6;;"
+		.. minetest.formspec_escape(desc):gsub("\n", ",").."]"
+		.. "list[detached:inspector_"..player_name..";item;10.75,7.25;1,1;]"
+		.. "list[current_player;main;2,7.25;8,4;]"
+		.. "listring[]"
+		.. "button_exit[11.1,0.2;0.8,0.8;close;x]"
+end
+
+minetest.register_on_joinplayer(function(player)
+	local player_name = player:get_player_name()
+	local inv = minetest.create_detached_inventory("inspector_"..player_name, {
+		allow_put = function(inv, listname, index, stack, inv_player)
+			local inv_player_name = inv_player:get_player_name()
+			local desc = inspect_item(stack)
+			local formspec = make_item_fs(inv_player_name, stack:get_name(), desc)
+			show_formspec(inv_player_name, formspec)
+			return 0
+		end,
+	})
+	inv:set_size("item", 1)
+end)
+
+minetest.register_on_leaveplayer(function(player, timed_out)
+	local player_name = player:get_player_name()
+	minetest.remove_detached_inventory("inspector_"..player_name)
+end)
+
+minetest.register_chatcommand("inspect_item", {
+	description = "inspect an item",
+	privs = {server = true},
+	func = function(name, param)
+		local formspec = make_item_fs(name)
+		show_formspec(name, formspec)
 		return true
 	end,
 })
