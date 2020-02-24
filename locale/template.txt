@@ -35,6 +35,8 @@ East, +X=
 Entity Information=
 #description of the inspector tool
 Inspector Tool=
+#error message if user gives incorrect parameters to /inspect
+Need 3 numeric parameters for X, Y and Z=
 #formspec label
 Node Information=
 #facedir
@@ -67,10 +69,10 @@ facing North, +Z=
 facing South, -Z=
 #wallmounted direction
 facing West, -X=
-#description of the /inspect command
-inspect a pos=
 #description of the /inspect_item command
-inspect an item=
+inspect an item from your inventory=
+#description of the /inspect command
+inspect the node at a global position=
 #header within text
 itemdef=
 #paramtype glasslikeliquidlevel

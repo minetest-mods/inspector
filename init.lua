@@ -337,21 +337,21 @@ minetest.register_tool("inspector:inspector", {
 })
 
 minetest.register_chatcommand("inspect", {
-	params = "inspect",
-	description = S("inspect a pos"),
+	params = "X Y Z",
+	description = S("inspect the node at a global position"),
 	privs = {server = true},
 	func = function(name, param)
 		local paramlist = {}
 		for p in string.gmatch(param, "%S+") do
-			paramlist[#paramlist + 1] = p
+			paramlist[#paramlist + 1] = tonumber(p)
 		end
 		local pos = {x = paramlist[1], y = paramlist[2], z = paramlist[3]}
-		if not pos.x or not pos.y or not pos.z then
-			return false, "Need 3 parameters for X, Y and Z"
+		if not pos.x or not pos.y or not pos.z or #paramlist ~= 3 then
+			return false, S("Need 3 numeric parameters for X, Y and Z")
 		end
 		local desc = inspect_pos(pos)
 		local formspec = "size[12,8]" ..
-							 "label[0.5,0.5;Node Information]" ..
+							 "label[0.5,0.5;"..S("Node Information").."]" ..
 							 "textarea[0.5,1.5;11.5,7;text;" .. S("Contents:") .. ";" ..
 							 minetest.formspec_escape(desc) .. "]" ..
 							 "button_exit[2.5,7.5;3,1;close;" .. S("Close") .. "]"
@@ -432,7 +432,7 @@ minetest.register_on_leaveplayer(function(player, timed_out)
 end)
 
 minetest.register_chatcommand("inspect_item", {
-	description = S("inspect an item"),
+	description = S("inspect an item from your inventory"),
 	privs = {server = true},
 	func = function(name, param)
 		local formspec = make_item_fs(name)
