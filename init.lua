@@ -10,6 +10,10 @@ of the license, or (at your option) any later version.
 
 --]]
 
+local S = minetest.get_translator(minetest.get_current_modname())
+-- NOTE: don't wrap literal variable names in S(), such as "param2" or "timeout",
+-- even though it's being displayed in formspec text. Source code is not localized.
+
 local fsc_modpath = minetest.get_modpath("fsc")
 local function show_formspec(player_name, formspec)
 	if fsc_modpath then
@@ -21,7 +25,6 @@ local function show_formspec(player_name, formspec)
 	end
 end
 
-
 local function make_fs(title, desc)
 	return "size[12,8]"..
 		"label[0.2,0.2;"..title.."]"..
@@ -31,6 +34,10 @@ local function make_fs(title, desc)
 end
 
 local indent_string = "     "
+
+local function text_header(text)
+	return "==== " .. text .. " ===="
+end
 
 local function indent(level, text, emphasize)
 	local result = text
@@ -70,7 +77,7 @@ local function describe_param(paramtype, value)
 	local lower4bits = value - upper4bits * 16
 	local lower5bits = value - upper3bits * 32
 
-	local prefix = "storing " .. paramtype .. ": "
+	local prefix = S("storing @1: ", paramtype)
 
 	if paramtype == "none" then
 		return ""
@@ -78,53 +85,75 @@ local function describe_param(paramtype, value)
 	elseif paramtype == "light" then
 		-- lua_api.txt says "The value stores light with and without sun in its upper and lower 4 bits respectively", but it
 		-- looks to me like it's the other way around, and the lower 4 bits store the "with sun" value.
-		return prefix .. lower4bits .. " with sun, " .. upper4bits .. " without sun"
+		return prefix .. S("@1 with sun, @2 without sun", lower4bits, upper4bits)
 
 	elseif paramtype == "flowingliquid" then
 		if lower4bits >= 8 then -- Flag 0x08 is "liquid flow down", i.e. there's no node underneath the flowing liquid node
-			return prefix .. "liquid level " .. (lower3bits + 1) .. " of 8, with vertical downflow"
+			return prefix .. S("liquid level @1 of 8, with vertical downflow", lower3bits + 1)
 		else
-			return prefix .. "liquid level " .. (lower3bits + 1) .. " of 8, without vertical downflow"
+			return prefix .. S("liquid level @1 of 8, without vertical downflow", lower3bits + 1)
 		end
 
 	elseif paramtype == "degrotate" then
-		return prefix .. "rotation of " .. value * 2 .. "°"
+		return prefix .. S("rotation of @1°", value * 2)
 
 	elseif paramtype == "facedir" or paramtype == "colorfacedir" then
 		local axisDirection = math.floor(lower5bits / 4)
 		local rotation = lower5bits % 4
-		local axisDesc = {"up, +Y","North, +Z","South, -Z","East, +X","West, -X","down, -Y"}
+		local axisDesc = {
+			S("up, +Y"),
+			S("North, +Z"),
+			S("South, -Z"),
+			S("East, +X"),
+			S("West, -X"),
+			S("down, -Y")
+		}
 		local colorInfo = ""
 		if paramtype == "colorfacedir" then
-			colorInfo = ", color " .. upper3bits
+			colorInfo = S(", color @1", upper3bits)
 		end
-		return prefix .. "axis-direction " .. axisDirection .. " (" .. axisDesc[axisDirection + 1] ..
-			"), rotation " .. rotation .. " (" .. (rotation * 90) .. "°)" .. colorInfo
+		return prefix .. S("axis-direction @1 (@2), rotation @3 (@4°)", axisDirection, axisDesc[axisDirection + 1], rotation, rotation * 90) .. colorInfo
 
 	elseif paramtype == "wallmounted" or paramtype == "colorwallmounted" then
 		local direction = lower3bits
-		local axisDesc = {"face down, -Y", "face up, +Y","facing West, -X","facing East, +X","facing South, -Z","facing North, +Z"}
+		local axisDesc = {
+			S("face down, -Y"),
+			S("face up, +Y"),
+			S("facing West, -X"),
+			S("facing East, +X"),
+			S("facing South, -Z"),
+			S("facing North, +Z")
+		}
 		local colorInfo = ""
 		if paramtype == "colorwallmounted" then
-			colorInfo = ", color index " .. upper5bits
+			colorInfo = S(", color index @1", upper5bits)
 		end
-		return prefix .. "direction " .. direction .. " (" .. axisDesc[direction + 1] .. ")" .. colorInfo
+		return prefix .. S("direction @1 (@2)", direction, axisDesc[direction + 1]) .. colorInfo
 
 	elseif paramtype == "meshoptions" then
 		local shape = lower3bits
-		local shapeDesc = {"X","\u{253c}","*","#","#","?unknown?","?unknown?","?unknown?"}
-		local result = prefix .. shapeDesc[shape + 1] .. " shaped"
-		if shape == 4          then result = result .. " with faces leaning out" end
-		if lower4bits >= 8     then result = result .. ", horz. variance" end
-		if lower5bits >= 16    then result = result .. ", enlarged 1.4x"  end
-		if upper3bits % 2 == 1 then result = result .. ", vert. variance" end
+		local shapeDesc = {
+			"X",
+			"\u{253c}",
+			"*",
+			"#",
+			"#",
+			S("?unknown?"),
+			S("?unknown?"),
+			S("?unknown?")
+		}
+		local result = prefix .. S("@1 shaped", shapeDesc[shape + 1])
+		if shape == 4          then result = result .. S(" with faces leaning out") end
+		if lower4bits >= 8     then result = result .. S(", horz. variance") end
+		if lower5bits >= 16    then result = result .. S(", enlarged 1.4x")  end
+		if upper3bits % 2 == 1 then result = result .. S(", vert. variance") end
 		return result
 
 	elseif paramtype == "color" then
-		return "storing color index"
+		return S("storing color index")
 
 	elseif paramtype == "glasslikeliquidlevel" then
-		return prefix .. "liquid level " .. value .. " (" .. math.floor(value * 1000 / 63 + 0.5) / 10 .. "%)"
+		return prefix .. S("liquid level @1 (@2%)", value, math.floor(value * 1000 / 63 + 0.5) / 10)
 
 	end
 
@@ -134,17 +163,18 @@ end
 local function inspect_pos(pos, light_pos)
 	local node    = minetest.get_node(pos)
 	local nodedef = minetest.registered_items[node.name]
-	local desc = "===== node data =====\n"
-	desc = desc .. indent(1, "name = " .. node.name) .. "\n"
+	local desc = text_header(S("node data")) .. "\n" ..
+		indent(1, "name = " .. node.name) .. "\n"
 	local param1type = "param1"
 	local param2type = "param2"
 	if nodedef then
 		param1type = nodedef.paramtype
 		param2type = nodedef.paramtype2
 	end
-	desc = desc .. indent(1, "param1 = " .. pad_figure(node.param1, 3) .. indent_string ..
-		describe_param(param1type,  node.param1)) .. "\n"
-	desc = desc .. indent(1, "param2 = " .. pad_figure(node.param2, 3) .. indent_string ..
+	desc = desc ..
+		indent(1, "param1 = " .. pad_figure(node.param1, 3) .. indent_string ..
+		describe_param(param1type,  node.param1)) .. "\n" ..
+		indent(1, "param2 = " .. pad_figure(node.param2, 3) .. indent_string ..
 		describe_param(param2type, node.param2)) .. "\n"
 
 	if light_pos == nil then
@@ -155,20 +185,20 @@ local function inspect_pos(pos, light_pos)
 	local light_night   = minetest.get_node_light(light_pos, 0)
 	if light_current ~= nil then
 		desc = desc .. indent(1, "light = " .. pad_figure(light_current, 2)) ..
-			"            " .. light_noon .. " at noon, " .. light_night .." at night\n"
+			"            " .. S("@1 at noon, @2 at night", light_noon, light_night) .. "\n"
 	end
 
 	local timer = minetest.get_node_timer(pos)
 	if timer:get_timeout() ~= 0 then
-		desc = desc .. "==== node timer ====\n"
-		desc = desc .. indent(1, "timeout = " .. timer:get_timeout()) .. "\n"
-		desc = desc .. indent(1, "elapsed = " .. timer:get_elapsed()) .. "\n"
+		desc = desc .. text_header(S("node timer")) .. "\n" ..
+			indent(1, "timeout = " .. timer:get_timeout()) .. "\n" ..
+			indent(1, "elapsed = " .. timer:get_elapsed()) .. "\n"
 	end
 
 	local meta = minetest.get_meta(pos)
 	local metatable = meta:to_table()
-	desc = desc .. "==== meta ====\n"
-	desc = desc .. indent(1, "meta.fields = " .. adjusted_dump(metatable.fields)) .. "\n"
+	desc = desc .. text_header(S("meta")) .. "\n" ..
+		indent(1, "meta.fields = " .. adjusted_dump(metatable.fields)) .. "\n"
 	local inventory = meta:get_inventory()
 	desc = desc .. indent(1, "meta.inventory = ") .. "\n"
 	for key, list in pairs(inventory:get_lists()) do
@@ -177,7 +207,7 @@ local function inspect_pos(pos, light_pos)
 		for i = 1, size do
 			local stack = list[i]
 			if not stack:is_empty() then
-				desc = desc .. indent(3, "\"" .. stack:get_name() .. "\" - " .. stack:get_count()) .. "\n"
+				desc = desc .. indent(3, '"' .. stack:get_name() .. '" - ' .. stack:get_count()) .. "\n"
 			end
 		end
 	end
@@ -204,20 +234,20 @@ local function inspect_pos(pos, light_pos)
 		end
 		table.sort(key_list)
 
-		desc = desc .. "==== nodedef ====\n"
+		desc = desc .. text_header(S("nodedef")) .. "\n"
 		for _, key in ipairs(key_list) do 
 			desc = desc .. indent(1, key .. " = " .. adjusted_dump(nodedef[key]), nodedef_fields[key]) .. "\n"
 		end
 	end
 
-	desc = desc .. "\n==== Location ====\n"
-	desc = desc .. indent(1, "position = " .. minetest.pos_to_string(pos)) .. "\n"
+	desc = desc .. "\n" .. text_header(S("location")) .. "\n" ..
+		indent(1, "position = " .. minetest.pos_to_string(pos)) .. "\n"
 	if minetest.get_biome_data ~= nil and minetest.registered_biomes ~= nil then
 		local biomeData = minetest.get_biome_data(pos)
 
-		desc = desc .. indent(1, "heat = "     .. tostring(biomeData.heat))     .."\n"
-		desc = desc .. indent(1, "humidity = " .. tostring(biomeData.humidity)) .. "\n"
-		local biomeDescription = "<none>"
+		desc = desc .. indent(1, "heat = "     .. tostring(biomeData.heat))     .."\n" ..
+			indent(1, "humidity = " .. tostring(biomeData.humidity)) .. "\n"
+		local biomeDescription = S("<none>")
 		if biomeData.biome ~= nil then
 			local biomeName = minetest.get_biome_name(biomeData.biome)
 			biomeDescription = biomeName
@@ -232,13 +262,17 @@ local function inspect_pos(pos, light_pos)
 end
 
 minetest.register_tool("inspector:inspector", {
-	description = "Inspector Tool",
+	description = S("Inspector Tool"),
 	inventory_image = "inspector.png",
 	liquids_pointable = true, -- makes it hard to use underwater.
 
 	on_use = function(itemstack, user, pointed_thing)
+		if not minetest.check_player_privs(user, "server") then
+			minetest.chat_send_player(user:get_player_name(), S("You don't have permission to run this command (missing privileges: server)"))
+			return
+		end
 
-		local t = "Node"
+		local t = S("Node Information")
 
 		local desc = ""
 		if pointed_thing.type == "nothing" then
@@ -258,18 +292,22 @@ minetest.register_tool("inspector:inspector", {
 				obj.physics_override = ref:get_physics_override()
 			end
 			desc = adjusted_dump(obj)
-			t = "Entity"
+			t = S("Entity Information")
 		end
 
 		local formspec = "size[12,8]"..
-				 "label[0.5,0.5;" .. t .. " Information]"..
-				 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
-				 minetest.formspec_escape(desc).."]"..
-				 "button_exit[2.5,7.5;3,1;close;Close]"
+				 "label[0.5,0.5;" .. t .. "]" ..
+				 "textarea[0.5,1.5;11.5,7;text;" .. S("Contents:") .. ";" ..
+				 minetest.formspec_escape(desc) .. "]" ..
+				 "button_exit[2.5,7.5;3,1;close;" .. S("Close") .."]"
 
 		show_formspec(user:get_player_name(), formspec)
 	end,
 	on_place = function(itemstack, user, pointed_thing)
+		if not minetest.check_player_privs(user, "server") then
+			minetest.chat_send_player(user:get_player_name(), S("You don't have permission to run this command (missing privileges: server)"))
+			return
+		end
 
 		local desc = ""
 		if pointed_thing.type == "nothing" then
@@ -289,10 +327,10 @@ minetest.register_tool("inspector:inspector", {
 		end
 
 		local formspec = "size[12,8]"..
-				 "label[0.5,0.5;Node Information]"..
-				 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
-				 minetest.formspec_escape(desc).."]"..
-				 "button_exit[2.5,7.5;3,1;close;Close]"
+				 "label[0.5,0.5;" .. S("Node Information") .. "]" ..
+				 "textarea[0.5,1.5;11.5,7;text;" .. S("Contents:") .. ";" ..
+				 minetest.formspec_escape(desc) .. "]" ..
+				 "button_exit[2.5,7.5;3,1;close;" .. S("Close") .. "]"
 
 		show_formspec(user:get_player_name(), formspec)
 	end
@@ -300,7 +338,7 @@ minetest.register_tool("inspector:inspector", {
 
 minetest.register_chatcommand("inspect", {
 	params = "inspect",
-	description = "inspect a pos",
+	description = S("inspect a pos"),
 	privs = {server = true},
 	func = function(name, param)
 		local paramlist = {}
@@ -312,11 +350,11 @@ minetest.register_chatcommand("inspect", {
 			return false, "Need 3 parameters for X, Y and Z"
 		end
 		local desc = inspect_pos(pos)
-		local formspec = "size[12,8]"..
-							 "label[0.5,0.5;Node Information]"..
-							 "textarea[0.5,1.5;11.5,7;text;Contents:;"..
-							 minetest.formspec_escape(desc).."]"..
-							 "button_exit[2.5,7.5;3,1;close;Close]"
+		local formspec = "size[12,8]" ..
+							 "label[0.5,0.5;Node Information]" ..
+							 "textarea[0.5,1.5;11.5,7;text;" .. S("Contents:") .. ";" ..
+							 minetest.formspec_escape(desc) .. "]" ..
+							 "button_exit[2.5,7.5;3,1;close;" .. S("Close") .. "]"
 
 		show_formspec(name, formspec)
 		return true
@@ -324,13 +362,13 @@ minetest.register_chatcommand("inspect", {
 })
 
 local function inspect_item(itemstack)
-	local desc = "==== count ====\n"
-	desc = desc .. indent(1, "count = " .. itemstack:get_count()) .. "\n"
+	local desc = text_header(S("count")) .. "\n" ..
+		indent(1, "count = " .. itemstack:get_count()) .. "\n"
 
 	local meta = itemstack:get_meta()
 	local metatable = meta:to_table()
-	desc = desc .. "==== meta ====\n"
-	desc = desc .. indent(1, "meta.fields = " .. adjusted_dump(metatable.fields)) .. "\n"
+	desc = desc .. text_header(S("meta")) .. "\n" ..
+		indent(1, "meta.fields = " .. adjusted_dump(metatable.fields)) .. "\n"
 	
 	local itemdef = itemstack:get_definition()
 	-- combine itemdef table with its "superclass" table
@@ -353,7 +391,7 @@ local function inspect_item(itemstack)
 	end
 	table.sort(key_list)
 
-	desc = desc .. "==== itemdef ====\n"
+	desc = desc .. text_header(S("itemdef")) .. "\n"
 	for _, key in ipairs(key_list) do 
 		desc = desc .. indent(1, key .. " = " .. adjusted_dump(itemdef[key]), nodedef_fields[key]) .. "\n"
 	end
@@ -394,7 +432,7 @@ minetest.register_on_leaveplayer(function(player, timed_out)
 end)
 
 minetest.register_chatcommand("inspect_item", {
-	description = "inspect an item",
+	description = S("inspect an item"),
 	privs = {server = true},
 	func = function(name, param)
 		local formspec = make_item_fs(name)

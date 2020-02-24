@@ -1,0 +1,99 @@
+# textdomain: inspector
+
+
+### init.lua ###
+
+#meshoptions modifier
+ with faces leaning out=
+#paramtype colorfacedir
+, color @1=
+#paramtype colorwallmounted
+, color index @1=
+#meshoptions modifier
+, enlarged 1.4x=
+#meshoptions modifier
+, horz. variance=
+#meshoptions modifier
+, vert. variance=
+#shown if a biome has no description
+<none>=
+#shown for invalid meshoptions
+?unknown?=
+#light levels for a pos
+@1 at noon, @2 at night=
+#meshoptions modifier
+@1 shaped=
+#light levels for a node
+@1 with sun, @2 without sun=
+#formspec exit button
+Close=
+#header for text area showing information
+Contents:=
+#facedir
+East, +X=
+#formspec label
+Entity Information=
+#description of the inspector tool
+Inspector Tool=
+#formspec label
+Node Information=
+#facedir
+North, +Z=
+#facedir
+South, -Z=
+#facedir
+West, -X=
+
+#shown when a player tries to use a tool without the server priv
+You don't have permission to run this command (missing privileges: server)=
+
+#paramtype facedir
+axis-direction @1 (@2), rotation @3 (@4°)=
+#size of the itemstack being inspected
+count=
+#paramtype wallmounted
+direction @1 (@2)=
+#paramtype facedir
+down, -Y=
+#wallmounted direction
+face down, -Y=
+#wallmounted direction
+face up, +Y=
+#wallmounted direction
+facing East, +X=
+#wallmounted direction
+facing North, +Z=
+#wallmounted direction
+facing South, -Z=
+#wallmounted direction
+facing West, -X=
+#description of the /inspect command
+inspect a pos=
+#description of the /inspect_item command
+inspect an item=
+#header within text
+itemdef=
+#paramtype glasslikeliquidlevel
+liquid level @1 (@2%)=
+#flowing liquid when there's no node underneath the flowing liquid node
+liquid level @1 of 8, with vertical downflow=
+#flowing liquid when there's a node underneath the flowing liquid node
+liquid level @1 of 8, without vertical downflow=
+#header within text
+location=
+#header within text
+meta=
+#header within text
+node data=
+#header within text
+node timer=
+#header within text
+nodedef=
+#paramtype degrotate
+rotation of @1°=
+#what paramtype is being stored here (eg facedir, wallmounted, flowingliquid, etc)
+storing @1: =
+#paramtype color
+storing color index=
+#paramtype facedir
+up, +Y=
